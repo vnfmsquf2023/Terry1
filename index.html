@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학급 학생 추첨기</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: 칠판 느낌에 어울리는 손글씨/나눔고딕 폰트 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gamja+Flower&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            /* 칠판 느낌의 진한 초록색 배경 및 은은한 패턴 효과 */
+            background-color: #1e3f20;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.15) 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.01) 2px, rgba(255, 255, 255, 0.01) 4px);
+        }
+
+        .chalk-font {
+            font-family: 'Gamja Flower', cursive;
+        }
+
+        /* 칠판 분필 테두리 느낌 */
+        .board-frame {
+            border: 12px solid #5c3a21;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 버튼 호버 및 클릭 효과 */
+        .chalk-btn {
+            background-color: #ffffff;
+            color: #1e3f20;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 0px #b0b0b0;
+        }
+
+        .chalk-btn:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0px #b0b0b0;
+        }
+
+        .chalk-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0px #b0b0b0;
+        }
+
+        /* 통계 및 설정 박스 스타일 */
+        .stat-badge {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white flex flex-col justify-between items-center p-4">
+
+    <!-- 상단 헤더 -->
+    <header class="text-center mt-6">
+        <h1 class="chalk-font text-3xl md:text-5xl font-bold tracking-wider text-yellow-200 opacity-90 drop-shadow">
+            ✏️ 오늘 발표자는 누구?
+        </h1>
+    </header>
+
+    <!-- 메인 칠판 영역 -->
+    <main class="w-full max-w-2xl my-auto">
+        <div class="board-frame bg-[#1b381c] rounded-xl p-8 md:p-12 text-center relative overflow-hidden flex flex-col items-center justify-center min-h-[320px] md:min-h-[380px]">
+            
+            <!-- 분필가루 먼지 느낌의 장식 -->
+            <div class="absolute top-3 left-4 text-xs text-white/30 tracking-widest select-none">
+                [ 학급 명단 추첨판 ]
+            </div>
+
+            <!-- 당첨자 이름 출력 공간 -->
+            <div id="nameDisplay" class="chalk-font text-5xl sm:text-6xl md:text-8xl font-bold my-auto tracking-wide text-white drop-shadow-md transition-transform duration-100 select-none">
+                누가 뽑힐까요?
+            </div>
+
+            <!-- 추첨 버튼 -->
+            <button id="drawBtn" onclick="pickRandomStudent()" class="chalk-btn text-2xl md:text-3xl font-bold py-3 px-10 rounded-full mt-6 focus:outline-none focus:ring-4 focus:ring-yellow-300">
+                🎲 뽑기!
+            </button>
+        </div>
+
+        <!-- 하단 잔여 인원 안내 -->
+        <div class="flex justify-between items-center text-sm md:text-base mt-4 px-2 text-green-200/80">
+            <span id="studentCount" class="stat-badge px-3 py-1 rounded-md">총 학생 수: 0명</span>
+            <span id="lastSelected" class="stat-badge px-3 py-1 rounded-md">이전 당첨: 없음</span>
+        </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="mb-4 text-center text-xs text-green-200/50">
+        즐거운 수업 시간을 위한 랜덤 추첨기
+    </footer>
+
+    <script>
+        // 학생 명단 배열 (원하는 이름으로 수정 가능합니다)
+        const students = [
+            "김철수", "이영희", "박민수", "홍길동", 
+            "정수진", "최동현", "강민경", "윤서준",
+            "한지민", "송우진", "임서윤", "오현우"
+        ];
+
+        let isRolling = false;
+
+        // 초기 화면 설정
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("studentCount").textContent = `총 학생 수: ${students.length}명`;
+        });
+
+        // 랜덤 학생 추첨 함수 (주르륵 넘어가는 롤링 애니메이션 포함)
+        function pickRandomStudent() {
+            if (isRolling) return; // 이미 추첨 중이면 중복 실행 방지
+            
+            isRolling = true;
+            const display = document.getElementById("nameDisplay");
+            const btn = document.getElementById("drawBtn");
+            
+            // 버튼 비활성화 상태 표시
+            btn.disabled = true;
+            btn.classList.add("opacity-50", "cursor-not-allowed");
+
+            let duration = 2000; // 총 애니메이션 시간 (2초)
+            let intervalTime = 50; // 초기 이름 변경 간격 (ms)
+            let elapsedTime = 0;
+
+            // 랜덤하게 교체되는 애니메이션 효과
+            const rollEffect = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * students.length);
+                display.textContent = students[randomIndex];
+                
+                // 텍스트 살짝 커졌다 작아지는 효과
+                display.style.transform = `scale(${1 + Math.random() * 0.1})`;
+
+                elapsedTime += intervalTime;
+
+                // 시간이 지날수록 점차 천천히 멈추도록 간격 조절
+                if (elapsedTime >= duration) {
+                    clearInterval(rollEffect);
+
+                    // 최종 당첨자 결정
+                    const finalIndex = Math.floor(Math.random() * students.length);
+                    const selectedName = students[finalIndex];
+
+                    // 최종 당첨자 표시
+                    display.textContent = selectedName;
+                    display.style.transform = "scale(1.15)";
+                    display.classList.add("text-yellow-300"); // 당첨자 강조 색상
+
+                    // 이전 당첨자 정보 업데이트
+                    document.getElementById("lastSelected").textContent = `이전 당첨: ${selectedName}`;
+
+                    // 애니메이션 마무리 후 상태 원복
+                    setTimeout(() => {
+                        display.style.transform = "scale(1.0)";
+                        btn.disabled = false;
+                        btn.classList.remove("opacity-50", "cursor-not-allowed");
+                        isRolling = false;
+                    }, 300);
+                }
+            }, intervalTime);
+        }
+    </script>
+</body>
+</html>
